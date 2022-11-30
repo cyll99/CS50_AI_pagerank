@@ -3,6 +3,7 @@ import random
 import re
 import sys
 
+
 DAMPING = 0.85
 SAMPLES = 10000
 
@@ -94,9 +95,37 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    iterate = {page:1/(len(corpus)) for page in corpus}
-    
+    rank = {page:1/(len(corpus)) for page in corpus}
+    inlink_map = {}
+    outlink_counts = {}
 
+    for page in corpus: add_node(page, inlink_map, outlink_counts)
+    for page in corpus:
+        outlink_counts[page] = len(corpus[page])
+        for item in corpus[page]: inlink_map[item].add(page)
+    
+    new_rank = dict()
+    while True:
+        for page, links in corpus.items():
+             new_rank[page] = ((1 - damping_factor) / len(corpus))  + (damping_factor * sum(rank[inlink] \
+                         / outlink_counts[inlink] for inlink in links))
+
+        # print(new_rank)
+        new_rank, rank = rank, new_rank
+        
+
+        if evaluate(new_rank, rank): return rank
+
+
+
+def evaluate(dic1, dic2):
+    for u, v in zip(dic1, dic2):
+        if abs(dic1[u] - dic2[v]) > .001 : return False   
+    return True
+
+def add_node(node, inlink, outlink):
+    if node not in inlink: inlink[node] = set()
+    if node not in outlink: outlink[node] = 0
 
 if __name__ == "__main__":
     main()
