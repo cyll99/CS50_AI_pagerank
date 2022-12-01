@@ -95,22 +95,25 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    rank = {page:1/(len(corpus)) for page in corpus}
+    all_pages = set()
     inlink_map = {}
     outlink_counts = {}
 
     for page in corpus: add_node(page, inlink_map, outlink_counts)
     for page in corpus:
         outlink_counts[page] = len(corpus[page])
-        for item in corpus[page]: inlink_map[item].add(page)
-    
+        all_pages.add(page)
+        for item in corpus[page]: 
+            inlink_map[item].add(page)
+            all_pages.add(item)
+
+    rank = {page:1/(len(all_pages)) for page in corpus} 
     new_rank = dict()
     while True:
         for page, links in corpus.items():
              new_rank[page] = ((1 - damping_factor) / len(corpus))  + (damping_factor * sum(rank[inlink] \
                          / outlink_counts[inlink] for inlink in links))
 
-        # print(new_rank)
         new_rank, rank = rank, new_rank
         
 
