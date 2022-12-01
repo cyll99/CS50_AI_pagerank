@@ -122,6 +122,10 @@ def iterate_pagerank(corpus, damping_factor):
 
 
 def evaluate(dic1, dic2):
+    """
+    Returns true if no PageRank value changes by more than 0.001 
+    between the current rank values and the new rank values.
+    """
     for u, v in zip(dic1, dic2):
         if abs(dic1[u] - dic2[v]) > .001 : return False   
     return True
