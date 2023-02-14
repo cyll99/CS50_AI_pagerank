@@ -60,11 +60,19 @@ def transition_model(corpus, page, damping_factor):
     """
     transition = dict()
     # (1-damping_factor) probability because we choose randomly among all pages.
+    if len(corpus[page]) < 1:
+    # no outgoing pages, choosing randomly from all possible pages
+        for key in corpus.keys():
+            transition[key] = 1 / len(corpus.keys())
+
     for pages in corpus:
-        transition[pages] = 1 - damping_factor
+        random_factor = (1 - damping_factor) / len(corpus.keys())
         if pages in corpus[page]:
-            N = len(corpus[page])
-            transition[pages] += damping_factor / N
+            even_factor =  damping_factor / len(corpus[page])
+            transition[pages] = even_factor + random_factor
+        else:
+            transition[pages] = random_factor
+
     return transition
     
 
@@ -78,61 +86,62 @@ def sample_pagerank(corpus, damping_factor, n):
     PageRank values should sum to 1.
     """
     sample = {page: 0 for page in corpus}
-    current_page = random.choice(list(sample.keys()))
+    current_page = None
     for _ in range(n):
-        sample[current_page] += 1 / n
+        if current_page:
+            model_transition = transition_model(corpus, current_page,damping_factor)
+        
+            model_transition_keys = list(model_transition.keys())
+            weights = list(model_transition[i] for i in model_transition)
+            current_page = random.choices(model_transition_keys, weights, k=1)[0]
+        
+        else:
+            current_page = random.choice(list(corpus.keys()))
 
-        model_transition = transition_model(corpus, current_page,damping_factor)
-        current_page = random.choice(list(model_transition.keys()))
+
+        sample[current_page] += (1/n)
+        
     return sample
 
 def iterate_pagerank(corpus, damping_factor):
     """
     Return PageRank values for each page by iteratively updating
     PageRank values until convergence.
-
     Return a dictionary where keys are page names, and values are
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    all_pages = set()
-    inlink_map = {}
-    outlink_counts = {}
+    pages_number = len(corpus)
+    old_dict = {}
+    new_dict = {}
 
-    for page in corpus: add_node(page, inlink_map, outlink_counts)
+    # assigning each page a rank of 1/n, where n is total number of pages in the corpus
     for page in corpus:
-        outlink_counts[page] = len(corpus[page])
-        all_pages.add(page)
-        for item in corpus[page]: 
-            inlink_map[item].add(page)
-            all_pages.add(item)
+        old_dict[page] = 1 / pages_number
 
-    rank = {page:1/(len(all_pages)) for page in corpus} 
-    new_rank = dict()
+    # repeatedly calculating new rank values basing on all of the current rank values
     while True:
-        for page, links in corpus.items():
-             new_rank[page] = ((1 - damping_factor) / len(corpus))  + (damping_factor * sum(rank[inlink] \
-                         / outlink_counts[inlink] for inlink in links))
+        for page in corpus:
+            temp = 0
+            for linking_page in corpus:
+                # check if page links to our page
+                if page in corpus[linking_page]:
+                    temp += (old_dict[linking_page] / len(corpus[linking_page]))
+                # if page has no links, interpret it as having one link for every other page
+                if len(corpus[linking_page]) == 0:
+                    temp += (old_dict[linking_page]) / len(corpus)
+            temp *= damping_factor
+            temp += (1 - damping_factor) / pages_number
 
-        new_rank, rank = rank, new_rank
-        
+            new_dict[page] = temp
 
-        if evaluate(new_rank, rank): return rank
+        difference = max([abs(new_dict[x] - old_dict[x]) for x in old_dict])
+        if difference < 0.001:
+            break
+        else:
+            old_dict = new_dict.copy()
 
-
-
-def evaluate(dic1, dic2):
-    """
-    Returns true if no PageRank value changes by more than 0.001 
-    between the current rank values and the new rank values.
-    """
-    for u, v in zip(dic1, dic2):
-        if abs(dic1[u] - dic2[v]) > .001 : return False   
-    return True
-
-def add_node(node, inlink, outlink):
-    if node not in inlink: inlink[node] = set()
-    if node not in outlink: outlink[node] = 0
+    return old_dict
 
 if __name__ == "__main__":
     main()
